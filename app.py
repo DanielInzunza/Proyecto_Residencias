@@ -49,7 +49,7 @@ ultimo_archivo_guardado = {"ruta": None}
 client = OpenAI()
 
 app = Dash(__name__)
-app.title = "Ensayo de Tracción - Prototipo V5"
+app.title = "Ensayo de Tracción"
 
 
 # -----------------------------
@@ -280,7 +280,7 @@ app.layout = html.Div(
     style={"fontFamily": "Arial", "margin": "16px"},
     children=[
         html.H1("Sistema de adquisición y visualización de datos"),
-        html.Div(f"Prototipo V5 | Fuente: {MODO_FUENTE}", style={"marginBottom": "14px", "color": "#444"}),
+        html.Div(f"Fuente: {MODO_FUENTE}", style={"marginBottom": "14px", "color": "#444"}),
 
         html.Div(
             style={"display": "grid", "gridTemplateColumns": "3fr 1.2fr", "gap": "18px"},
