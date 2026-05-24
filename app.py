@@ -334,6 +334,7 @@ app.layout = html.Div(
         ),
         html.H1("Sistema de adquisición y visualización de datos"),
         html.Div(f"Fuente: {MODO_FUENTE}", style={"marginBottom": "14px", "color": "#444"}),
+        html.Div(f"Fuente: {MODO_FUENTE}", style={"marginBottom": "14px", "color": "#444"}),
 
         html.Div(
             id="contenedor-principal",
