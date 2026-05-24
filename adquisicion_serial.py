@@ -3,26 +3,17 @@ import serial
 
 
 class LectorSerialEnsayo:
-    def __init__(self, puerto, baudrate, timeout=1.0):
+    def __init__(self, puerto, baudrate):
         self.puerto = puerto
         self.baudrate = baudrate
-        self.timeout = timeout
         self.ser = None
         self.activo = False
         self.finalizado = False
         self.tiempo = 0
-        self.ciclos_sin_datos = 0
-
-    def conectar(self):
-        if self.ser is None or not self.ser.is_open:
-            self.ser = serial.Serial(
-                port=self.puerto,
-                baudrate=self.baudrate,
-                timeout=self.timeout
-            )
 
     def iniciar(self):
-        self.conectar()
+        if self.ser is None or not self.ser.is_open:
+            self.ser = serial.Serial(self.puerto, self.baudrate, timeout=1)
         self.activo = True
         self.finalizado = False
 
@@ -33,7 +24,6 @@ class LectorSerialEnsayo:
         self.detener()
         self.tiempo = 0
         self.finalizado = False
-        self.ciclos_sin_datos = 0
         if self.ser is not None and self.ser.is_open:
             self.ser.close()
         self.ser = None
@@ -42,16 +32,14 @@ class LectorSerialEnsayo:
         if not self.activo:
             return None
 
-        try:
-            self.conectar()
-        except serial.SerialException:
+        if self.ser is None or not self.ser.is_open:
+            return None
+
+        if self.ser.in_waiting <= 0:
             return None
 
         try:
-            if self.ser.in_waiting <= 0:
-                return None
-
-            linea = self.ser.readline().decode("utf-8", errors="ignore").strip()
+            linea = self.ser.readline().decode("utf-8").strip()
             if not linea:
                 return None
 
@@ -63,7 +51,6 @@ class LectorSerialEnsayo:
             desplazamiento = float(partes[1])
 
             self.tiempo += 1
-            self.ciclos_sin_datos = 0
 
             return {
                 "tiempo": self.tiempo,
@@ -72,5 +59,5 @@ class LectorSerialEnsayo:
                 "timestamp": round(time.time(), 3)
             }
 
-        except (ValueError, serial.SerialException, OSError):
+        except (ValueError, serial.SerialException, UnicodeDecodeError):
             return None

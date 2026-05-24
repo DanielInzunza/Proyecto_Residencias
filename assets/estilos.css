@@ -1,0 +1,21 @@
+@keyframes parpadeo-verde-negro {
+    0% {
+        color: #00ff00;
+    }
+
+    50% {
+        color: #000000;
+    }
+
+    100% {
+        color: #00ff00;
+    }
+}
+
+.estado-ejecucion {
+    animation: parpadeo-verde-negro 1s infinite !important;
+}
+
+.estado-detenido {
+    color: #ff0000 !important;
+}

@@ -1,5 +1,11 @@
 MODO_FUENTE = "simulador"
-# Cambiar a "serial" cuando se use la máquina real
+# Cambiar a "gpio" solo cuando este ejecutando el programa en raspberry o "serial" cuando se use la máquina real
+
+GPIO_FUERZA_A = 22
+GPIO_FUERZA_B = 23
+
+GPIO_DESPLAZAMIENTO_A = 19
+GPIO_DESPLAZAMIENTO_B = 21
 
 PUERTO_SERIAL = "COM3"
 # En Raspberry Pi normalmente es: "/dev/ttyUSB0"
@@ -25,7 +31,8 @@ NOMBRE_BASE_CSV = "ensayo_traccion"
 MAX_CICLOS_SIN_DATOS = 8
 
 # --- Chat ---
-OPENAI_MODEL = "gpt-5"
+GEMINI_API_KEY = "AIzaSyCbbtgEH52QdSHc97exEVzXqmxOKmcB3BU"
+GEMINI_MODEL = "gemini-1.5-flash"
 CHAT_INSTRUCCIONES = """
 Eres un asistente técnico para una interfaz de ensayos de tracción.
 Responde en español, de forma clara y breve.

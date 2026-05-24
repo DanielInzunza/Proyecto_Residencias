@@ -17,7 +17,3 @@ python app.py
 Ingresar esta ip en navegador para acceder a programa:
 
 http://127.0.0.1:8050
-
-Api_key_openai:
-
-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
