@@ -20,6 +20,12 @@ class SimuladorEnsayo:
         self.activo = False
 
     def leer_dato(self):
+        """
+        leer_dato:
+             Esta funcion se utiliza para..
+        Entrada :
+        Salida :
+        """
         if not self.activo or self.finalizado:
             return None
 

@@ -3,3 +3,4 @@ plotly
 pandas
 pyserial
 google-generativeai
+gpiozero

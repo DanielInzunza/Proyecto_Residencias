@@ -1,3 +1,4 @@
+import math
 from collections import deque
 from datetime import datetime
 import os
@@ -30,13 +31,15 @@ from config import (
     GPIO_FUERZA_B,
     GPIO_DESPLAZAMIENTO_A,
     GPIO_DESPLAZAMIENTO_B,
+    ESCALAS_SENSOR,
+    MATERIALES_PROBETA,
 )
 
 from simulador import SimuladorEnsayo
 from adquisicion_serial import LectorSerialEnsayo
 from adquisicion_gpio import LectorGPIOEnsayo
 
-
+#Configuracion de conexion serial y GPIO
 def crear_fuente_datos():
     if MODO_FUENTE == "serial":
         return LectorSerialEnsayo(PUERTO_SERIAL, BAUDRATE, TIMEOUT_SERIAL)
@@ -95,15 +98,39 @@ def generar_nombre_csv():
     return os.path.join(CARPETA_EXPORTACION, f"{NOMBRE_BASE_CSV}_{marca_tiempo}.csv")
 
 
-def calcular_variables(df):
+#Calculo de variables en base al diametro y la longitud 
+def calcular_variables(df, diametro=4.0, longitud=50.0):
     if df.empty:
         return df
 
     df = df.copy()
-    df["deformacion"] = df["desplazamiento"] / LONGITUD_INICIAL
-    df["esfuerzo"] = df["fuerza"] / AREA_INICIAL
+
+    try:
+        diametro = float(diametro)
+    except:
+        diametro = 4.0
+
+    try:
+        longitud = float(longitud)
+    except:
+        longitud = 50.0
+
+    if diametro <= 0:
+        diametro = 4.0
+
+    if longitud <= 0:
+        longitud = 50.0
+
+    # Área circular de la probeta
+    area = math.pi * (diametro ** 2) / 4
+
+    # Cálculos mecánicos
+    df["deformacion"] = df["desplazamiento"] / longitud
+    df["esfuerzo"] = df["fuerza"] / area
+
     df["deformacion"] = df["deformacion"].round(6)
     df["esfuerzo"] = df["esfuerzo"].round(6)
+
     return df
 
 
@@ -334,7 +361,6 @@ app.layout = html.Div(
         ),
         html.H1("Sistema de adquisición y visualización de datos"),
         html.Div(f"Fuente: {MODO_FUENTE}", style={"marginBottom": "14px", "color": "#444"}),
-        html.Div(f"Fuente: {MODO_FUENTE}", style={"marginBottom": "14px", "color": "#444"}),
 
         html.Div(
             id="contenedor-principal",
@@ -422,7 +448,9 @@ app.layout = html.Div(
                                         "border": "1px solid #d9d9d9",
                                         "borderRadius": "8px",
                                         "padding": "16px",
-                                        "backgroundColor": "#fcfcfc"
+                                        "backgroundColor": "#fcfcfc",
+                                        "minWidth": "0",
+                                        "overflow": "hidden",
                                     },
                                     children=[
                                         dcc.Tabs(
@@ -449,14 +477,18 @@ app.layout = html.Div(
                                                             style={"padding": "12px 0"},
                                                             children=[
                                                                 html.Label("Tipo de material"),
-                                                                dcc.Input(
-                                                                    id="input-tipo-material",
-                                                                    type="text",
-                                                                    placeholder="Ejemplo: Acero, aluminio, polímero",
+                                                                dcc.Dropdown(
+                                                                    id="selector-material",
+                                                                    options=[
+                                                                        {"label": datos_material["nombre"], "value": clave}
+                                                                        for clave, datos_material in MATERIALES_PROBETA.items()
+                                                                    ],
+                                                                    value="acero",
+                                                                    clearable=False,
                                                                     style={
                                                                         "width": "100%",
-                                                                        "padding": "8px",
-                                                                        "marginBottom": "12px"
+                                                                        "marginBottom": "12px",
+                                                                        "color": "#111827"
                                                                     }
                                                                 ),
 
@@ -679,6 +711,7 @@ app.layout = html.Div(
                 dcc.Input(
                     id="input-factor-a",
                     type="text",
+                    value=1.0,
                     placeholder="Ingrese Factor a",
                     style={
                         "width": "100%",
@@ -691,6 +724,7 @@ app.layout = html.Div(
                 dcc.Input(
                     id="input-factor-b",
                     type="text",
+                    value=1.0,
                     placeholder="Ingrese Factor b",
                     style={
                         "width": "100%",
@@ -792,10 +826,70 @@ def descargar_csv(n_clicks):
     Output("panel-resultados", "children"),
     Output("mensaje-accion", "children"),
     Input("intervalo-actualizacion", "n_intervals"),
-    State("store-mensaje", "data")
+    State("store-mensaje", "data"),
+    State("selector-escala", "value"),
+    State("selector-material", "value"),
+    State("input-diametro", "value"),
+    State("input-longitud", "value"),
+    State("input-factor-a", "value"),
+    State("input-factor-b", "value")
 )
-def actualizar_interfaz(n_intervals, mensaje):
+def actualizar_interfaz(n_intervals, mensaje, escala_seleccionada, material_seleccionado, diametro_probeta, longitud_probeta, factor_a, factor_b):
     nuevo_dato = fuente.leer_dato()
+
+    try:
+        factor_a = float(factor_a)
+    except:
+        factor_a = 1.0
+
+    try:
+        factor_b = float(factor_b)
+    except:
+        factor_b = 1.0
+
+    if factor_a <= 0:
+        factor_a = 1.0
+
+    if factor_b <= 0:
+        factor_b = 1.0
+
+    if nuevo_dato is not None:
+
+        material = MATERIALES_PROBETA.get(
+            material_seleccionado,
+            MATERIALES_PROBETA["acero"]
+        )
+
+        # Escala/material
+        fuerza = (
+            nuevo_dato["fuerza"]
+            * material["factor_fuerza"]
+        )
+
+        desplazamiento = (
+            nuevo_dato["desplazamiento"]
+            * material["factor_desplazamiento"]
+        )
+
+        # Factores de calibración
+        fuerza *= factor_a
+        desplazamiento *= factor_b
+
+        nuevo_dato["fuerza"] = round(fuerza, 3)
+        nuevo_dato["desplazamiento"] = round(desplazamiento, 3)
+
+    if nuevo_dato is not None:
+        escala = ESCALAS_SENSOR.get(escala_seleccionada, ESCALAS_SENSOR["escala_1"])
+
+        nuevo_dato["fuerza"] = round(
+            nuevo_dato["fuerza"] * escala["factor_fuerza"],
+            3
+        )
+
+        nuevo_dato["desplazamiento"] = round(
+            nuevo_dato["desplazamiento"] * escala["factor_desplazamiento"],
+            3
+        )
 
     if nuevo_dato is not None:
         datos.append(nuevo_dato)
@@ -827,7 +921,11 @@ def actualizar_interfaz(n_intervals, mensaje):
     else:
         df = pd.DataFrame(datos)
 
-    df = calcular_variables(df)
+    df = calcular_variables(
+        df,
+        diametro=diametro_probeta,
+        longitud=longitud_probeta
+    )
     df_grafica = df.tail(MAX_PUNTOS_GRAFICA) if not df.empty else df
 
     fig_1 = crear_figura_fuerza_desplazamiento(df_grafica)
@@ -901,6 +999,8 @@ def actualizar_interfaz(n_intervals, mensaje):
     Input("btn-chat", "n_clicks"),
     State("chat-input", "value"),
     State("store-chat", "data"),
+    State("input-diametro", "value"),
+    State("input-longitud", "value"),
     prevent_initial_call=True
 )
 def enviar_pregunta_chat(n_clicks, pregunta, historial):
@@ -916,7 +1016,11 @@ def enviar_pregunta_chat(n_clicks, pregunta, historial):
     else:
         df = pd.DataFrame(datos)
 
-    df = calcular_variables(df)
+    df = calcular_variables(
+        df,
+        diametro=diametro_probeta,
+        longitud=longitud_probeta
+    )
 
     try:
         respuesta = consultar_gemini(pregunta.strip(), df)
@@ -1229,6 +1333,25 @@ def actualizar_tema(tema, chat_visible):
         style_header,
         style_data
     )
+
+@app.callback(
+    Output("tabs-resumen-probeta", "style"),
+    Input("store-tema", "data")
+)
+def refrescar_tabs(tema):
+
+    if tema == "oscuro":
+        return {
+            "width": "100%",
+            "backgroundColor": "#1f2937",
+            "transition": "all 0.2s ease"
+        }
+
+    return {
+        "width": "100%",
+        "backgroundColor": "#fcfcfc",
+        "transition": "all 0.2s ease"
+    }
 
 if __name__ == "__main__":
     app.run(debug=True, host="127.0.0.1", port=8050)
